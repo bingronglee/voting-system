@@ -35,10 +35,21 @@ let draggedIndex = -1;
 
 // 頁面載入完成後初始化
 document.addEventListener('DOMContentLoaded', function() {
+    // 通用初始化
     initializeUser();
-    initializeDragAndDrop();
-    initializeEventListeners();
     loadImages();
+
+    // 僅在投票頁面 (index.html) 執行
+    if (document.getElementById('votingContainer')) {
+        initializeDragAndDrop();
+        initializeEventListeners();
+        checkVoteStatus();
+    }
+
+    // 僅在結果頁面 (results.html) 執行
+    if (document.getElementById('resultsChart')) {
+        initializeResults();
+    }
 });
 
 // 初始化用戶身份
@@ -501,10 +512,143 @@ function loadImages() {
     });
 }
 
-// 頁面載入完成後檢查投票狀態
-document.addEventListener('DOMContentLoaded', function() {
-    checkVoteStatus();
-});
+
+
+// 結果頁面初始化
+async function initializeResults() {
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    loadingOverlay.classList.add('show');
+
+    try {
+        const results = await loadResultsData();
+        if (results && results.statistics) {
+            renderResults(results);
+        } else {
+            showErrorToast('無法載入結果，請稍後再試。');
+        }
+    } catch (error) {
+        console.error('初始化結果頁面失敗:', error);
+        showErrorToast(error.message || '載入結果時發生錯誤');
+    } finally {
+        loadingOverlay.classList.remove('show');
+    }
+}
+
+// 從API或本地存儲加載結果數據
+async function loadResultsData() {
+    try {
+        const response = await fetch(API_CONFIG.RESULTS_URL);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const result = await response.json();
+        if (result.success) {
+            return result.data;
+        }
+        throw new Error(result.message || '從伺服器獲取資料失敗');
+    } catch (error) {
+        console.warn('從伺服器獲取資料失敗，使用本地資料:', error);
+        // 如果API失敗，嘗試從本地存儲加載
+        const localVotes = JSON.parse(localStorage.getItem('allVotes') || '[]');
+        if (localVotes.length > 0) {
+            return { statistics: calculateLocalStatistics(localVotes) };
+        }
+        return null;
+    }
+}
+
+// 渲染結果
+function renderResults(data) {
+    renderSummary(data.statistics);
+    renderChart(data.statistics);
+}
+
+// 渲染摘要信息
+function renderSummary(stats) {
+    const summaryContainer = document.getElementById('summaryContainer');
+    summaryContainer.innerHTML = ''; // 清空舊內容
+
+    const sortedDests = Object.keys(stats).sort((a, b) => stats[b].totalScore - stats[a].totalScore);
+
+    sortedDests.forEach((key, index) => {
+        const stat = stats[key];
+        const destInfo = DESTINATIONS[key];
+        const card = `
+            <div class="summary-card rank-${index + 1}">
+                <div class="summary-rank">${index + 1}</div>
+                <div class="summary-dest">${destInfo.name}</div>
+                <div class="summary-score">${stat.totalScore}分</div>
+                <div class="summary-votes">(${stat.voteCount} 次投票)</div>
+            </div>
+        `;
+        summaryContainer.innerHTML += card;
+    });
+}
+
+// 渲染圖表
+function renderChart(stats) {
+    const ctx = document.getElementById('resultsChart').getContext('2d');
+    const labels = Object.keys(stats).map(key => DESTINATIONS[key].name);
+    const scores = Object.keys(stats).map(key => stats[key].totalScore);
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '總得分',
+                data: scores,
+                backgroundColor: [
+                    'rgba(139, 92, 246, 0.7)',
+                    'rgba(99, 102, 241, 0.7)',
+                    'rgba(59, 130, 246, 0.7)',
+                    'rgba(34, 197, 94, 0.7)',
+                    'rgba(234, 179, 8, 0.7)'
+                ],
+                borderColor: [
+                    'rgba(139, 92, 246, 1)',
+                    'rgba(99, 102, 241, 1)',
+                    'rgba(59, 130, 246, 1)',
+                    'rgba(34, 197, 94, 1)',
+                    'rgba(234, 179, 8, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+}
+
+// 在本地計算統計信息（備用）
+function calculateLocalStatistics(votes) {
+    const stats = {};
+    Object.keys(DESTINATIONS).forEach(key => {
+        stats[key] = { totalScore: 0, voteCount: 0 };
+    });
+
+    votes.forEach(vote => {
+        vote.votes.forEach(item => {
+            if (stats[item.destination]) {
+                stats[item.destination].totalScore += item.score;
+                stats[item.destination].voteCount++;
+            }
+        });
+    });
+    return stats;
+}
 
 // 匯出函數供其他頁面使用
 window.VotingSystem = {
