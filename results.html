@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>投票結果 - 匿名投票評分系統</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .results-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border-radius: var(--border-radius-lg);
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: var(--shadow-md);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .ranking-section {
+            background: var(--bg-card);
+            border-radius: var(--border-radius-lg);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .ranking-item {
+            display: flex;
+            align-items: center;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            background: var(--bg-secondary);
+            border-radius: var(--border-radius);
+            border-left: 4px solid var(--primary-color);
+            transition: var(--transition);
+        }
+
+        .ranking-item:hover {
+            transform: translateX(5px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .ranking-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .ranking-position {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .ranking-position.first { color: #ffd700; }
+        .ranking-position.second { color: #c0c0c0; }
+        .ranking-position.third { color: #cd7f32; }
+
+        .ranking-info {
+            flex: 1;
+            margin-left: 1.5rem;
+        }
+
+        .destination-name {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .destination-stats {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .ranking-score {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            text-align: center;
+            min-width: 80px;
+        }
+
+        .chart-section {
+            background: var(--bg-card);
+            border-radius: var(--border-radius-lg);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-bottom: 1rem;
+        }
+
+        .voters-section {
+            background: var(--bg-card);
+            border-radius: var(--border-radius-lg);
+            padding: 2rem;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .voter-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            background: var(--bg-secondary);
+            border-radius: var(--border-radius);
+            transition: var(--transition);
+        }
+
+        .voter-item:hover {
+            background: var(--primary-light);
+        }
+
+        .voter-avatar {
+            width: 40px;
+            height: 40px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.25rem;
+            margin-right: 1rem;
+        }
+
+        .voter-info {
+            flex: 1;
+        }
+
+        .voter-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .vote-time {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .back-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 1rem;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: var(--transition);
+            box-shadow: var(--shadow-md);
+            z-index: 100;
+        }
+
+        .back-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .refresh-btn {
+            background: var(--success-color);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .refresh-btn:hover {
+            background: #45b7aa;
+            transform: translateY(-2px);
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-secondary);
+        }
+
+        .no-data i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+        }
+
+        @media (max-width: 768px) {
+            .results-container {
+                padding: 1rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .ranking-item {
+                flex-direction: column;
+                text-align: center;
+                gap: 1rem;
+            }
+
+            .ranking-info {
+                margin-left: 0;
+            }
+
+            .destination-stats {
+                justify-content: center;
+            }
+
+            .chart-container {
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="back-btn" onclick="goBack()">
+        <i class="fas fa-arrow-left"></i>
+    </button>
+
+    <div class="results-container">
+        <!-- 頭部 -->
+        <header class="header">
+            <div class="header-content">
+                <h1 class="title">
+                    <i class="fas fa-chart-bar"></i>
+                    投票結果統計
+                </h1>
+                <button class="refresh-btn" onclick="refreshData()">
+                    <i class="fas fa-sync-alt"></i>
+                    刷新資料
+                </button>
+            </div>
+        </header>
+
+        <!-- 統計資料 -->
+        <section class="stats-grid" id="statsGrid">
+            <div class="stat-card">
+                <div class="stat-value" id="totalVotes">0</div>
+                <div class="stat-label">總投票數</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalParticipants">0</div>
+                <div class="stat-label">參與人數</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="averageScore">0</div>
+                <div class="stat-label">平均分</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="lastUpdate">--</div>
+                <div class="stat-label">最後更新</div>
+            </div>
+        </section>
+
+        <!-- 排名結果 -->
+        <section class="ranking-section">
+            <h2 class="section-title">
+                <i class="fas fa-trophy"></i>
+                目的地排名
+            </h2>
+            <div id="rankingList">
+                <!-- 排名將通過JavaScript動態生成 -->
+            </div>
+        </section>
+
+        <!-- 圖表展示 -->
+        <section class="chart-section">
+            <h2 class="section-title">
+                <i class="fas fa-chart-column"></i>
+                得分分佈圖
+            </h2>
+            <div class="chart-container">
+                <canvas id="scoreChart"></canvas>
+            </div>
+        </section>
+
+        <!-- 投票者列表 -->
+        <section class="voters-section">
+            <h2 class="section-title">
+                <i class="fas fa-users"></i>
+                投票者列表
+            </h2>
+            <div id="votersList">
+                <!-- 投票者將通過JavaScript動態生成 -->
+            </div>
+        </section>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        // 頁面載入完成後初始化結果頁面
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeResults();
+        });
+
+        // 初始化結果頁面
+        async function initializeResults() {
+            try {
+                showLoading();
+                await loadResultsData();
+                hideLoading();
+            } catch (error) {
+                console.error('載入結果資料失敗:', error);
+                showError('載入數據失敗，請稍後重試');
+                hideLoading();
+            }
+        }
+
+        // 載入結果資料
+        async function loadResultsData() {
+            let allVotes = [];
+            
+            try {
+                // 首先嘗試從Google Apps Script獲取資料
+                const response = await fetch(window.VotingSystem.API_CONFIG.RESULTS_URL);
+                if (response.ok) {
+                    const data = await response.json();
+                    allVotes = data.votes || [];
+                }
+            } catch (error) {
+                console.log('從伺服器獲取資料失敗，使用本地資料:', error);
+            }
+            
+            // 如果伺服器資料為空，使用本機存放區的資料
+            if (allVotes.length === 0) {
+                allVotes = window.VotingSystem.getAllVotes();
+            }
+            
+            if (allVotes.length === 0) {
+                showNoData();
+                return;
+            }
+            
+            // 處理和顯示資料
+            const results = processVoteData(allVotes);
+            displayStatistics(results);
+            displayRankings(results);
+            displayChart(results);
+            displayVoters(allVotes);
+        }
+
+        // 處理投票資料
+        function processVoteData(allVotes) {
+            const destinationScores = {};
+            const destinationVotes = {};
+            
+            // 初始化目的地數據
+            Object.keys(window.VotingSystem.DESTINATIONS).forEach(key => {
+                destinationScores[key] = 0;
+                destinationVotes[key] = 0;
+            });
+            
+            // 計算總分和投票數
+            allVotes.forEach(vote => {
+                vote.votes.forEach(voteItem => {
+                    destinationScores[voteItem.destination] += voteItem.score;
+                    destinationVotes[voteItem.destination] += 1;
+                });
+            });
+            
+            // 生成排名
+            const rankings = Object.keys(destinationScores).map(destination => ({
+                destination: destination,
+                name: window.VotingSystem.DESTINATIONS[destination].name,
+                totalScore: destinationScores[destination],
+                voteCount: destinationVotes[destination],
+                averageScore: destinationVotes[destination] > 0 ? 
+                    (destinationScores[destination] / destinationVotes[destination]).toFixed(1) : 0
+            })).sort((a, b) => b.totalScore - a.totalScore);
+            
+            return {
+                rankings: rankings,
+                totalVotes: allVotes.length,
+                totalParticipants: allVotes.length,
+                averageScore: rankings.length > 0 ? 
+                    (rankings.reduce((sum, item) => sum + item.totalScore, 0) / rankings.length).toFixed(1) : 0,
+                lastUpdate: allVotes.length > 0 ? 
+                    new Date(Math.max(...allVotes.map(vote => new Date(vote.timestamp)))).toLocaleString('zh-CN') : '--'
+            };
+        }
+
+        // 顯示統計資料
+        function displayStatistics(results) {
+            document.getElementById('totalVotes').textContent = results.totalVotes;
+            document.getElementById('totalParticipants').textContent = results.totalParticipants;
+            document.getElementById('averageScore').textContent = results.averageScore;
+            document.getElementById('lastUpdate').textContent = results.lastUpdate;
+        }
+
+        // 顯示排名
+        function displayRankings(results) {
+            const rankingList = document.getElementById('rankingList');
+            
+            if (results.rankings.length === 0) {
+                rankingList.innerHTML = '<div class="no-data"><i class="fas fa-inbox"></i><p>暫無投票數據</p></div>';
+                return;
+            }
+            
+            const rankingHTML = results.rankings.map((item, index) => {
+                const position = index + 1;
+                let positionClass = '';
+                let positionIcon = position;
+                
+                switch (position) {
+                    case 1:
+                        positionClass = 'first';
+                        positionIcon = '🥇';
+                        break;
+                    case 2:
+                        positionClass = 'second';
+                        positionIcon = '🥈';
+                        break;
+                    case 3:
+                        positionClass = 'third';
+                        positionIcon = '🥉';
+                        break;
+                }
+                
+                return `
+                    <div class="ranking-item">
+                        <div class="ranking-position ${positionClass}">${positionIcon}</div>
+                        <div class="ranking-info">
+                            <div class="destination-name">${item.name}</div>
+                            <div class="destination-stats">
+                                <span><i class="fas fa-star"></i> 平均分: ${item.averageScore}</span>
+                                <span><i class="fas fa-vote-yea"></i> 投票數: ${item.voteCount}</span>
+                            </div>
+                        </div>
+                        <div class="ranking-score">${item.totalScore}</div>
+                    </div>
+                `;
+            }).join('');
+            
+            rankingList.innerHTML = rankingHTML;
+        }
+
+        // 顯示圖表
+        function displayChart(results) {
+            const ctx = document.getElementById('scoreChart').getContext('2d');
+            
+            const labels = results.rankings.map(item => item.name);
+            const scores = results.rankings.map(item => item.totalScore);
+            const colors = [
+                '#667eea',
+                '#764ba2',
+                '#ff6b6b',
+                '#4ecdc4',
+                '#ffe66d'
+            ];
+            
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '總得分',
+                        data: scores,
+                        backgroundColor: colors.slice(0, labels.length),
+                        borderColor: colors.slice(0, labels.length),
+                        borderWidth: 2,
+                        borderRadius: 8,
+                        borderSkipped: false,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: 'white',
+                            bodyColor: 'white',
+                            borderColor: '#667eea',
+                            borderWidth: 1,
+                            cornerRadius: 8,
+                            callbacks: {
+                                label: function(context) {
+                                    const item = results.rankings[context.dataIndex];
+                                    return [
+                                        `總得分: ${item.totalScore}`,
+                                        `平均分: ${item.averageScore}`,
+                                        `投票數: ${item.voteCount}`
+                                    ];
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            },
+                            ticks: {
+                                color: '#718096'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: '#718096',
+                                maxRotation: 45
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 1000,
+                        easing: 'easeOutQuart'
+                    }
+                }
+            });
+        }
+
+        // 顯示投票者清單
+        function displayVoters(allVotes) {
+            const votersList = document.getElementById('votersList');
+            
+            if (allVotes.length === 0) {
+                votersList.innerHTML = '<div class="no-data"><i class="fas fa-user-slash"></i><p>暫無投票者數據</p></div>';
+                return;
+            }
+            
+            const votersHTML = allVotes.map(vote => {
+                const voteTime = new Date(vote.timestamp).toLocaleString('zh-CN');
+                const animalIcon = getAnimalIcon(vote.userAnimal);
+                
+                return `
+                    <div class="voter-item">
+                        <div class="voter-avatar">${animalIcon}</div>
+                        <div class="voter-info">
+                            <div class="voter-name">${vote.userAnimal}</div>
+                            <div class="vote-time">${voteTime}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            votersList.innerHTML = votersHTML;
+        }
+
+        // 獲取動物圖示
+        function getAnimalIcon(animalName) {
+            const animalIcons = {
+                '熊貓': '🐼',
+                '老虎': '🐅',
+                '獅子': '🦁',
+                '大象': '🐘',
+                '長頸鹿': '🦒',
+                '猩猩': '🦍',
+                '袋鼠': '🦘',
+                '企鵝': '🐧',
+                '海豚': '🐬',
+                '考拉': '🐨'
+            };
+            return animalIcons[animalName] || '🐾';
+        }
+
+        // 顯示無數據狀態
+        function showNoData() {
+            document.getElementById('statsGrid').innerHTML = 
+                '<div class="no-data" style="grid-column: 1 / -1;"><i class="fas fa-chart-bar"></i><p>暫無投票數據</p></div>';
+            document.getElementById('rankingList').innerHTML = 
+                '<div class="no-data"><i class="fas fa-inbox"></i><p>暫無排名數據</p></div>';
+            document.getElementById('votersList').innerHTML = 
+                '<div class="no-data"><i class="fas fa-user-slash"></i><p>暫無投票者數據</p></div>';
+        }
+
+        // 顯示錯誤資訊
+        function showError(message) {
+            const errorHTML = `<div class="no-data"><i class="fas fa-exclamation-triangle"></i><p>${message}</p></div>`;
+            document.getElementById('statsGrid').innerHTML = errorHTML;
+            document.getElementById('rankingList').innerHTML = errorHTML;
+            document.getElementById('votersList').innerHTML = errorHTML;
+        }
+
+        // 顯示載入狀態
+        function showLoading() {
+            document.body.classList.add('loading');
+        }
+
+        // 隱藏載入狀態
+        function hideLoading() {
+            document.body.classList.remove('loading');
+        }
+
+        // 刷新資料
+        async function refreshData() {
+            const refreshBtn = document.querySelector('.refresh-btn');
+            const icon = refreshBtn.querySelector('i');
+            
+            // 添加旋轉動畫
+            icon.classList.add('fa-spin');
+            refreshBtn.disabled = true;
+            
+            try {
+                await loadResultsData();
+            } finally {
+                setTimeout(() => {
+                    icon.classList.remove('fa-spin');
+                    refreshBtn.disabled = false;
+                }, 1000);
+            }
+        }
+
+        // 返回上一頁
+        function goBack() {
+            window.location.href = 'index.html';
+        }
+    </script>
+
+<style>
+#minimax-floating-ball {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 10px 12px;
+  background: #222222;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  color: #F8F8F8;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  z-index: 9999;
+  transition: all 0.3s ease;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+#minimax-floating-ball:hover {
+  transform: translateY(-2px);
+  background: #383838;
+}
+
+.minimax-ball-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.minimax-logo-wave {
+  width: 26px;
+  height: 22px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='22' viewBox='0 0 26 22' fill='none'%3E%3Cg clip-path='url(%23clip0_3442_102412)'%3E%3Cpath d='M12.8405 14.6775C12.8405 14.9897 13.0932 15.2424 13.4055 15.2424C13.7178 15.2424 13.9705 14.9897 13.9705 14.6775V2.98254C13.9705 1.88957 13.0809 1 11.9879 1C10.895 1 10.0054 1.88957 10.0054 2.98254V11.566V17.1068C10.0054 17.5773 9.62327 17.9594 9.1528 17.9594C8.68233 17.9594 8.30021 17.5773 8.30021 17.1068V8.04469C8.30021 6.95172 7.41063 6.06215 6.31767 6.06215C5.22471 6.06215 4.33513 6.95172 4.33513 8.04469V11.8855C4.33513 12.3559 3.953 12.7381 3.48254 12.7381C3.01207 12.7381 2.62994 12.3559 2.62994 11.8855V10.4936C2.62994 10.1813 2.37725 9.92861 2.06497 9.92861C1.7527 9.92861 1.5 10.1813 1.5 10.4936V11.8855C1.5 12.9784 2.38957 13.868 3.48254 13.868C4.5755 13.868 5.46508 12.9784 5.46508 11.8855V8.04469C5.46508 7.57422 5.8472 7.19209 6.31767 7.19209C6.78814 7.19209 7.17026 7.57422 7.17026 8.04469V17.1068C7.17026 18.1998 8.05984 19.0894 9.1528 19.0894C10.2458 19.0894 11.1353 18.1998 11.1353 17.1068V2.98254C11.1353 2.51207 11.5175 2.12994 11.9879 2.12994C12.4584 2.12994 12.8405 2.51207 12.8405 2.98254V14.6775Z' fill='%23F8F8F8'/%3E%3Cpath d='M23.3278 6.06215C22.2348 6.06215 21.3452 6.95172 21.3452 8.04469V15.6143C21.3452 16.0847 20.9631 16.4669 20.4926 16.4669C20.0222 16.4669 19.6401 16.0847 19.6401 15.6143V2.98254C19.6401 1.88957 18.7505 1 17.6575 1C16.5645 1 15.675 1.88957 15.675 2.98254V19.0175C15.675 19.4879 15.2928 19.8701 14.8224 19.8701C14.3519 19.8701 13.9698 19.4879 13.9698 19.0175V17.0329C13.9698 16.7206 13.7171 16.4679 13.4048 16.4679C13.0925 16.4679 12.8398 16.7206 12.8398 17.0329V19.0175C12.8398 20.1104 13.7294 21 14.8224 21C15.9153 21 16.8049 20.1104 16.8049 19.0175V2.98254C16.8049 2.51207 17.187 2.12994 17.6575 2.12994C18.128 2.12994 18.5101 2.51207 18.5101 2.98254V15.6143C18.5101 16.7072 19.3997 17.5968 20.4926 17.5968C21.5856 17.5968 22.4752 16.7072 22.4752 15.6143V8.04469C22.4752 7.57422 22.8573 7.19209 23.3278 7.19209C23.7982 7.19209 24.1804 7.57422 24.1804 8.04469V14.6775C24.1804 14.9897 24.4331 15.2424 24.7453 15.2424C25.0576 15.2424 25.3103 14.9897 25.3103 14.6775V8.04469C25.3103 6.95172 24.4207 6.06215 23.3278 6.06215Z' fill='%23F8F8F8'/%3E%3C/g%3E%3Cdefs%3E%3CclipPath id='clip0_3442_102412'%3E%3Crect width='25' height='22' fill='white' transform='translate(0.5)'/%3E%3C/clipPath%3E%3C/defs%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.minimax-ball-text {
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.minimax-close-icon {
+  margin-left: 8px;
+  font-size: 16px;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.minimax-close-icon:hover {
+  opacity: 1;
+}
+</style>
+<div id="minimax-floating-ball">
+  <div class="minimax-ball-content">
+    <div class="minimax-logo-wave"></div>
+    <span class="minimax-ball-text">Created by MiniMax Agent</span>
+  </div>
+  <div class="minimax-close-icon">×</div>
+</div>
+<script>
+// Initialize floating ball functionality
+function initFloatingBall() {
+  const ball = document.getElementById('minimax-floating-ball');
+  if (!ball) return;
+
+  // Initial animation
+  ball.style.opacity = '0';
+  ball.style.transform = 'translateY(20px)';
+
+  setTimeout(() => {
+    ball.style.opacity = '1';
+    ball.style.transform = 'translateY(0)';
+  }, 500);
+
+  // Handle logo click
+  const ballContent = ball.querySelector('.minimax-ball-content');
+  ballContent.addEventListener('click', function (e) {
+    e.stopPropagation();
+    window.open('https://agent.minimax.io/agent', '_blank');
+    ball.style.transform = 'scale(0.95)';
+    setTimeout(() => {
+      ball.style.transform = 'scale(1)';
+    }, 100);
+  });
+
+  // Handle close button click
+  const closeIcon = ball.querySelector('.minimax-close-icon');
+  closeIcon.addEventListener('click', function (e) {
+    e.stopPropagation();
+    ball.style.opacity = '0';
+    ball.style.transform = 'translateY(20px)';
+
+    setTimeout(() => {
+      ball.style.display = 'none';
+    }, 300);
+  });
+}
+
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', initFloatingBall); 
+</script>
+
+</body>
+</html>
