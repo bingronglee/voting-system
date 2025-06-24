@@ -23,8 +23,8 @@ const DESTINATIONS = {
 
 // Google Apps Script API配置（需要使用者提供）
 const API_CONFIG = {
-    SUBMIT_URL: 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec',
-    RESULTS_URL: 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec?action=getResults'
+    SUBMIT_URL: 'https://script.google.com/macros/s/AKfycbzySuVfM19yvK0QcJ_fP8mAMq9EVJ3ctFYicAAEI3GkqChYooOiJLTGNmraiX50Ivh5YQ/exec',
+    RESULTS_URL: 'https://script.google.com/macros/s/AKfycbzySuVfM19yvK0QcJ_fP8mAMq9EVJ3ctFYicAAEI3GkqChYooOiJLTGNmraiX50Ivh5YQ/exec?action=getResults'
 };
 
 // 全域變數
