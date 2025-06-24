@@ -5,7 +5,7 @@
 
 // Google Sheets 配置
 const SHEET_CONFIG = {
-  SPREADSHEET_ID: 'YOUR_SPREADSHEET_ID', // 需要替換為實際的表格ID
+  SPREADSHEET_ID: '1DwyQC9YZiUJlEQU2FzFIi1qodc4rhoWrm6byJUaGD0A', // 需要替換為實際的表格ID
   VOTES_SHEET: '投票記錄',
   RESULTS_SHEET: '統計結果'
 };
@@ -24,6 +24,11 @@ const DESTINATIONS = {
  * 處理GET和POST請求
  */
 function doGet(e) {
+  // 處理CORS預檢請求
+  if (e.parameter.action === 'options') {
+    return handleOptions();
+  }
+
   try {
     const action = e.parameter.action;
     
@@ -31,9 +36,11 @@ function doGet(e) {
       return getVotingResults();
     }
     
+    // 預設返回簡單的狀態資訊
     return createResponse({
-      success: false,
-      message: '未知的操作'
+      success: true,
+      message: 'API is working',
+      timestamp: new Date().toISOString()
     });
     
   } catch (error) {
@@ -47,6 +54,19 @@ function doGet(e) {
 
 function doPost(e) {
   try {
+    // 處理CORS預檢請求
+    if (e.postData && e.postData.type === 'application/json' && JSON.parse(e.postData.contents).action === 'options') {
+        return handleOptions();
+    }
+
+    // 檢查POST資料是否存在
+    if (!e.postData || !e.postData.contents) {
+      return createResponse({
+        success: false,
+        message: '缺少POST數據'
+      });
+    }
+    
     const requestData = JSON.parse(e.postData.contents);
     const action = requestData.action;
     
@@ -56,7 +76,7 @@ function doPost(e) {
     
     return createResponse({
       success: false,
-      message: '未知的操作'
+      message: '未知的操作: ' + action
     });
     
   } catch (error) {
@@ -368,17 +388,28 @@ function getOrCreateSheet(sheetName) {
 }
 
 /**
- * 創建HTTP回應
+ * 處理CORS預檢請求 (OPTIONS)
+ */
+function handleOptions() {
+  const response = ContentService.createTextOutput();
+  response.setMimeType(ContentService.MimeType.TEXT);
+  response.setContent('OK');
+  // 設置CORS頭部
+  response.addHeader('Access-Control-Allow-Origin', '*');
+  response.addHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  response.addHeader('Access-Control-Allow-Headers', 'Content-Type');
+  return response;
+}
+
+/**
+ * 建立標準化的JSON響應
  */
 function createResponse(data) {
-  return ContentService
-    .createTextOutput(JSON.stringify(data))
-    .setMimeType(ContentService.MimeType.JSON)
-    .setHeaders({
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST',
-      'Access-Control-Allow-Headers': 'Content-Type'
-    });
+  const response = ContentService.createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+  // 為所有響應添加CORS頭部
+  response.addHeader('Access-Control-Allow-Origin', '*');
+  return response;
 }
 
 /**
