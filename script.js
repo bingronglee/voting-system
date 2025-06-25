@@ -409,7 +409,6 @@ async function submitToGoogleSheets(voteData) {
     try {
         const response = await fetch(API_CONFIG.SUBMIT_URL, {
             method: 'POST',
-            mode: 'cors',
             headers: {
                 'Content-Type': 'application/json',
             },
