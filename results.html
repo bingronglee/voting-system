@@ -353,32 +353,24 @@
             }
         }
 
-        // 載入結果資料
+        // 從 Supabase 載入結果資料
         async function loadResultsData() {
-            let allVotes = [];
-            
-            try {
-                // 首先嘗試從Google Apps Script獲取資料
-                const response = await fetch(window.VotingSystem.API_CONFIG.RESULTS_URL);
-                if (response.ok) {
-                    const data = await response.json();
-                    allVotes = data.votes || [];
-                }
-            } catch (error) {
-                console.log('從伺服器獲取資料失敗，使用本地資料:', error);
-            }
-            
-            // 如果伺服器資料為空，使用本機存放區的資料
-            if (allVotes.length === 0) {
-                allVotes = window.VotingSystem.getAllVotes();
-            }
-            
+            const result = await window.VotingSystem.loadResultsData();
+            const allVotes = result?.votes || [];
+
             if (allVotes.length === 0) {
                 showNoData();
                 return;
             }
-            
-            // 處理和顯示資料
+
+            const results = processVoteData(allVotes);
+            displayStatistics(results);
+            displayRankings(results);
+            displayChart(results);
+            displayVoters(allVotes);
+        }
+
+        // 處理和顯示資料
             const results = processVoteData(allVotes);
             displayStatistics(results);
             displayRankings(results);
