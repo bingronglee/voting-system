@@ -21,11 +21,11 @@ const DESTINATIONS = {
     'hong-kong': { name: '香港', nameEn: 'Hong Kong' }
 };
 
-// Google Apps Script API配置（需要使用者提供）
-const API_CONFIG = {
-    SUBMIT_URL: 'https://script.google.com/macros/s/AKfycbzySuVfM19yvK0QcJ_fP8mAMq9EVJ3ctFYicAAEI3GkqChYooOiJLTGNmraiX50Ivh5YQ/exec',
-    RESULTS_URL: 'https://script.google.com/macros/s/AKfycbzySuVfM19yvK0QcJ_fP8mAMq9EVJ3ctFYicAAEI3GkqChYooOiJLTGNmraiX50Ivh5YQ/exec?action=getResults'
-};
+// Supabase configuration
+const SUPABASE_URL = "https://ttegvkvonxardogfesol.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_VgWFNixm7DFfBm4gIXbhZQ_5AiZuuAg";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const API_CONFIG = { SUPABASE_URL, SUPABASE_ANON_KEY };
 
 // 全域變數
 let currentUser = null;
@@ -346,7 +346,7 @@ async function submitVote() {
         const voteData = collectVoteData();
         
         // 提交到Google Apps Script
-        const response = await submitToGoogleSheets(voteData);
+        const response = await submitToSupabase(voteData);
         
         if (response.success) {
             showSuccessToast('投票提交成功！');
@@ -404,33 +404,26 @@ function collectVoteData() {
     };
 }
 
-// 提交資料到Google Sheets
-async function submitToGoogleSheets(voteData) {
-    try {
-        const response = await fetch(API_CONFIG.SUBMIT_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                action: 'submitVote',
-                data: voteData
-            })
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const result = await response.json();
-        return result;
-        
-    } catch (error) {
-        console.error('提交到Google Sheets失敗:', error);
-        
-        // 如果是網路錯誤或API配置問題，使用本機存放區作為備選
-        return await submitToLocalStorage(voteData);
+// 提交資料到 Supabase
+async function submitToSupabase(voteData) {
+    const { data, error } = await supabaseClient
+        .from('voting_system_votes')
+        .insert({
+            user_id: voteData.userId,
+            user_animal: voteData.userAnimal,
+            votes: voteData.votes,
+            vote_timestamp: voteData.timestamp,
+            user_agent: voteData.userAgent,
+            screen_resolution: voteData.screenResolution
+        })
+        .select()
+        .single();
+
+    if (error) {
+        throw new Error(error.message || 'Supabase 投票提交失敗');
     }
+
+    return { success: true, data };
 }
 
 // 本機存放區備選方案
@@ -533,27 +526,27 @@ async function initializeResults() {
     }
 }
 
-// 從API或本地存儲加載結果數據
+// 從 Supabase 載入結果資料
 async function loadResultsData() {
-    try {
-        const response = await fetch(API_CONFIG.RESULTS_URL);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const result = await response.json();
-        if (result.success) {
-            return result.data;
-        }
-        throw new Error(result.message || '從伺服器獲取資料失敗');
-    } catch (error) {
-        console.warn('從伺服器獲取資料失敗，使用本地資料:', error);
-        // 如果API失敗，嘗試從本地存儲加載
-        const localVotes = JSON.parse(localStorage.getItem('allVotes') || '[]');
-        if (localVotes.length > 0) {
-            return { statistics: calculateLocalStatistics(localVotes) };
-        }
-        return null;
+    const { data: rows, error } = await supabaseClient
+        .from('voting_system_votes')
+        .select('user_id, user_animal, votes, vote_timestamp, user_agent, screen_resolution')
+        .order('created_at', { ascending: true });
+
+    if (error) {
+        throw new Error(error.message || 'Supabase 結果讀取失敗');
     }
+
+    const votes = (rows || []).map(row => ({
+        userId: row.user_id,
+        userAnimal: row.user_animal,
+        votes: row.votes || [],
+        timestamp: row.vote_timestamp,
+        userAgent: row.user_agent,
+        screenResolution: row.screen_resolution
+    }));
+
+    return { votes, statistics: calculateLocalStatistics(votes) };
 }
 
 // 渲染結果
@@ -655,5 +648,6 @@ window.VotingSystem = {
     getVoteData: () => JSON.parse(localStorage.getItem('voteData') || 'null'),
     getAllVotes: () => JSON.parse(localStorage.getItem('allVotes') || '[]'),
     DESTINATIONS: DESTINATIONS,
-    API_CONFIG: API_CONFIG
+    API_CONFIG: API_CONFIG,
+    loadResultsData: loadResultsData
 };
