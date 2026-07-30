@@ -1,286 +1,55 @@
 # 匿名投票評分系統
 
-一個現代化的匿名投票網頁應用，專為朋友之間選擇出國旅遊目的地而設計。支持拖拽排序投票、即時積分統計，並通過Google Apps Script和Google Sheets實現資料持久化。
+一個使用 HTML、CSS、JavaScript、Supabase 與 GitHub Pages 建立的匿名排序投票系統。投票者會獲得本機匿名代號，依序排列五個目的地，系統將排名轉成分數並儲存到 Supabase。
 
-## 🌟 核心功能
+## 技術架構
 
-### ✨ 匿名身份系統
-- 自動為每個參與者生成6-10個獨特的動物代號（熊貓🐼、老虎🐅、獅子🦁等）
-- 確保投票過程完全匿名，保護用戶隱私
-- 防止重複投票，每個代號只能投票一次
+- 前端：`index.html`、`results.html`、`script.js`、`style.css`
+- 資料庫：Supabase PostgreSQL + Data API + Row Level Security
+- 圖表：Chart.js
+- 部署：GitHub Pages，從 `main` 分支根目錄發布
 
-### 🗳️ 排序投票機制
-- **目的地選項**：越南胡志明市、日本沖繩、韓國濟州島、韓國首爾、香港
-- **積分規則**：第1名5分、第2名4分、第3名3分、第4名2分、第5名1分
-- **操作方式**：支援桌面端拖拽和移動端觸摸排序
-- **即時回饋**：即時顯示當前排序和預計得分
+## Supabase 設定
 
-### 📊 智慧資料統計
-- **累計積分**：自動計算各目的地的總得分和排名
-- **詳細分析**：顯示投票次數、平均得分、排名分佈
-- **視覺化圖表**：柱狀圖、圓形圖等多種資料展示
-- **即時更新**：投票後立即更新統計結果
+1. 開啟 Supabase project 的 SQL Editor。
+2. 貼上並執行 [`supabase-setup.sql`](./supabase-setup.sql)。
+3. 到 Project Settings → API Keys 取得 Project URL 與 publishable key（舊版名稱為 anon key）。
+4. 在 `script.js` 的 Supabase configuration 填入：
 
-## 🎯 適用場景
-
-- **朋友聚會**：集體決定旅遊目的地
-- **家庭活動**：選擇度假地點
-- **公司團建**：確定團隊出行目標
-- **社群投票**：任何需要排序選擇的場景
-
-## 🔧 技術架構
-
-### 前端技術棧
-- **HTML5 + CSS3**：現代化回應式設計
-- **Vanilla JavaScript**：羽量級交互邏輯
-- **Chart.js**：專業數據視覺化
-- **Progressive Web App**：支援移動端安裝
-
-### 後端服務
-- **Google Apps Script**：無伺服器後端處理
-- **Google Sheets**：資料存儲和管理
-- **RESTful API**：標準HTTP介面
-
-### 部署方案
-- **GitHub Pages**：免費靜態網站託管
-- **Google Cloud Platform**：後端服務支援
-
-## 📁 專案檔案結構
-
-```
-voting-system/
-├── index.html                    # 主投票頁面
-├── results.html                  # 結果展示頁面
-├── style.css                     # 完整樣式表
-├── script.js                     # 核心JavaScript邏輯
-├── README.md                     # 項目說明文檔
-├── GitHub部署指南.md             # GitHub Pages部署教程
-├── images/                       # 高品質目的地圖片
-│   ├── vietnam-hcmc.jpg         # 越南胡志明市
-│   ├── japan-okinawa.jpg        # 日本沖繩
-│   ├── korea-jeju.png           # 韓國濟州島
-│   ├── korea-seoul.jpg          # 韓國首爾
-│   └── hong-kong.jpeg           # 香港
-└── google-apps-script/          # 後端代碼和配置
-    ├── Code.gs                   # Google Apps Script完整代碼
-    └── 部署指南.md               # 後端配置詳細說明
+```js
+const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+const SUPABASE_ANON_KEY = 'YOUR_PUBLISHABLE_OR_ANON_KEY';
 ```
 
-## 🚀 快速部署指南
+瀏覽器端只能使用 publishable／anon key。不要把 `service_role` 或 secret key 放進前端，也不要提交到公開 repository。
 
-### 第一步：配置Google後端
+## GitHub Pages 部署
 
-1. **創建Google Sheets**
-   - 新建試算表，命名為"投票系統資料"
-   - 複製表格URL中的ID部分
+在 repository 的 Settings → Pages 設定：
 
-2. **部署Google Apps Script**
-   - 訪問[Google Apps Script](https://script.google.com)
-   - 創建新項目，粘貼`google-apps-script/Code.gs`中的代碼
-   - 替換代碼中的`SPREADSHEET_ID`
-   - 部署為Web應用，獲取API URL
+- Source：Deploy from a branch
+- Branch：`main`
+- Folder：`/ (root)`
 
-3. **詳細步驟**：參考[Google Apps Script部署指南](google-apps-script/部署指南.md)
+儲存後等待 GitHub Pages 建置完成，再開啟網站網址。
 
-### 第二步：部署前端網站
+## 投票資料格式
 
-1. **GitHub倉庫創建**
-   - Fork本項目或創建新倉庫
-   - 上傳所有前端檔
+每位匿名投票者會以一筆資料儲存在 `voting_system_votes`，其中 `votes` 是 JSONB 陣列，包含目的地、排名與分數。`user_id` 有唯一限制，避免同一個瀏覽器匿名代號重複寫入。
 
-2. **配置GitHub Pages**
-   - 在倉庫Settings中啟用Pages
-   - 選擇main分支作為源
+## 安全提醒
 
-3. **更新API配置**
-   - 編輯`script.js`中的`API_CONFIG`
-   - 替換為實際的Google Apps Script URL
+- 這是匿名、未登入的投票系統；任何取得網站的人都可以讀取結果並嘗試提交資料。
+- RLS policy 只開放必要的公開讀取與新增操作。
+- 若需要真正的使用者驗證、每人只能投一次或管理員後台，應再加入 Supabase Auth 與更嚴格的 policy。
+- 舊的 Google Apps Script 目錄不再被前端引用；Supabase 是目前唯一的資料後端。
 
-4. **詳細步驟**：參考[GitHub部署指南](GitHub部署指南.md)
+## 本機測試
 
-### 第三步：測試驗證
+可使用任意靜態伺服器預覽，例如：
 
-1. **功能測試**
-   - 訪問部署的網站URL
-   - 進行完整投票流程測試
-   - 驗證結果頁面資料顯示
-
-2. **資料驗證**
-   - 檢查Google Sheets中的資料記錄
-   - 確認統計計算正確性
-
-## 💡 使用說明
-
-### 投票流程
-
-1. **訪問網站**
-   - 打開投票頁面，系統自動分配動物代號
-   - 查看當前身份（如：熊貓🐼）
-
-2. **排序投票**
-   - 拖拽目的地卡片進行排序
-   - 第1位的目的地將獲得5分，第2位4分，依此類推
-   - 即時預覽當前排序結果
-
-3. **提交投票**
-   - 點擊"提交投票"按鈕
-   - 確認投票選擇
-   - 系統自動保存並防止重複投票
-
-4. **查看結果**
-   - 訪問結果頁面查看即時統計
-   - 查看各目的地排名和得分
-   - 查看詳細的投票分析
-
-### 結果解讀
-
-- **總得分**：各目的地累計積分，分數越高排名越前
-- **投票次數**：參與投票的總人數
-- **平均得分**：目的地的平均分數，反映綜合評價
-- **排名分佈**：顯示每個目的地在各排名的選擇次數
-
-## 🔒 隱私保護
-
-- **完全匿名**：僅使用動物代號，不收集任何個人資訊
-- **資料安全**：所有投票資料存儲在您自己的Google帳戶中
-- **透明開源**：所有代碼公開，可自由審查和修改
-
-## 🎨 介面特色
-
-### 設計亮點
-- **現代化UI**：紫色漸變背景，白色卡片設計
-- **回應式佈局**：完美適配手機、平板、桌面設備
-- **流暢動畫**：拖拽排序和狀態轉換動畫
-- **視覺友好**：高品質目的地圖片和清晰排版
-
-### 交互體驗
-- **直觀操作**：拖拽即可完成排序
-- **即時回饋**：操作結果立即可見
-- **友好提示**：清晰的操作指引和狀態資訊
-- **錯誤處理**：友好的錯誤提示和重試機制
-
-## 📊 資料分析功能
-
-### 統計指標
-- **參與度分析**：投票人數和活躍度
-- **偏好分析**：各目的地受歡迎程度
-- **排名分析**：詳細的排名分佈統計
-- **趨勢分析**：投票時間分佈
-
-### 視覺化圖表
-- **柱狀圖**：直觀顯示各目的地得分對比
-- **圓形圖**：展示得分占比分佈
-- **排行榜**：清晰的排名列表
-- **統計表格**：詳細的資料明細
-
-## 🛠️ 自訂配置
-
-### 修改投票選項
-```javascript
-// 在script.js中更新目的地配置
-const DESTINATIONS = {
-    'new-destination': { 
-        name: '新目的地', 
-        nameEn: 'New Destination' 
-    }
-    // 添加更多選項...
-};
+```bash
+python3 -m http.server 8000
 ```
 
-### 調整積分規則
-```javascript
-// 修改積分計算邏輯
-const score = customScoringFunction(rank, totalItems);
-```
-
-### 更換視覺主題
-```css
-/* 在style.css中修改主題色彩 */
-:root {
-    --primary-color: #your-primary-color;
-    --secondary-color: #your-secondary-color;
-    --accent-color: #your-accent-color;
-}
-```
-
-## 🔧 故障排除
-
-### 常見問題解決
-
-1. **投票提交失敗**
-   ```
-   問題：點擊提交後顯示錯誤
-   解決：檢查Google Apps Script API URL配置
-        驗證網路連接和許可權設置
-   ```
-
-2. **結果頁面無數據**
-   ```
-   問題：統計頁面顯示"暫無數據"
-   解決：確認Google Sheets許可權正確
-        檢查API返回資料格式
-   ```
-
-3. **移動端操作異常**
-   ```
-   問題：手機上拖拽不靈敏
-   解決：使用觸摸友好的排序方式
-        檢查移動端CSS適配
-   ```
-
-### 調試技巧
-
-1. **查看流覽器控制台**：按F12檢查JavaScript錯誤
-2. **驗證API連接**：直接訪問Google Apps Script URL測試
-3. **檢查網路請求**：在Network標籤查看API調用狀態
-
-## 🚀 性能優化建議
-
-### 前端優化
-- 壓縮CSS和JavaScript檔
-- 優化圖片大小和格式
-- 啟用流覽器緩存
-- 使用CDN加速靜態資源
-
-### 後端優化
-- 優化Google Apps Script執行效率
-- 合理設置API調用頻率
-- 實現資料緩存機制
-
-## 🤝 貢獻指南
-
-歡迎參與專案改進：
-
-1. **Fork項目**到您的GitHub帳戶
-2. **創建功能分支**進行開發
-3. **測試功能**確保品質
-4. **提交Pull Request**描述更改內容
-
-### 開發規範
-- 遵循現有代碼風格
-- 添加必要的注釋
-- 測試新功能的相容性
-- 更新相關文檔
-
-## 📝 版本歷史
-
-- **v1.0.0** - 初始版本發佈
-  - 基礎投票功能
-  - Google Apps Script集成
-  - GitHub Pages部署支持
-
-## 📄 開源協議
-
-本專案採用 MIT 開源協定，您可以自由使用、修改和分發。
-
-
-
-
-
-
-
----
-
-**重要提示**：首次使用請務必按照部署指南完成Google Apps Script和Google Sheets的配置，確保系統正常運行。
-
-**立即開始**：[🚀 開始部署您的投票系統](GitHub部署指南.md)
+然後開啟 `http://localhost:8000/`。
